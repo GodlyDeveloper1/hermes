@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hermes USSD simulator</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --desk: #17130f; --desk-2: #211b15; --ink: #efe6d6; --muted: #9d927f; --line: #3a3128;
+    --shell: #d8d0bd; --shell-dark: #b3a98f; --shell-edge: #8f866f;
+    --lcd: #a9b78a; --lcd-dark: #8f9d72; --pixel: #1d2616;
+    --call: #2f7d4f; --end: #b3402e; --signal: #e8792b;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: "Avenir Next Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: radial-gradient(120% 90% at 50% 0%, var(--desk-2), var(--desk) 70%);
+    color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.45;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 48px;
+    padding: 40px 32px; align-items: start;
+  }
+  h1 { font-size: 15px; letter-spacing: .22em; text-transform: uppercase; margin: 0 0 6px; color: var(--signal); font-weight: 600; }
+  h2 { font-size: 12px; letter-spacing: .2em; text-transform: uppercase; margin: 28px 0 10px; color: var(--muted); font-weight: 600; }
+  p { margin: 0 0 10px; color: var(--muted); max-width: 34ch; }
+  .lede { color: var(--ink); font-size: 26px; line-height: 1.15; max-width: 16ch; margin: 0 0 14px; font-weight: 500; }
+  .left { justify-self: end; max-width: 300px; }
+  .right { max-width: 330px; }
+  label { display: block; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 12px 0 4px; }
+  input[type=text], input[type=password] {
+    width: 100%; background: transparent; border: 0; border-bottom: 1px solid var(--line); color: var(--ink);
+    font: 15px var(--mono); padding: 6px 0; outline: none; border-radius: 0;
+  }
+  input:focus { border-bottom-color: var(--signal); }
+  .status { font: 12px var(--mono); color: var(--muted); margin-top: 10px; min-height: 1.4em; }
+  .status.bad { color: #e2735f; } .status.good { color: #8fc49f; }
+  kbd { font: 12px var(--mono); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; color: var(--ink); }
+  .keys-help { font-size: 13px; color: var(--muted); line-height: 1.9; }
+
+  /* phone */
+  .phone {
+    width: 292px; padding: 26px 22px 30px; border-radius: 46px 46px 64px 64px;
+    background: linear-gradient(160deg, #e6dfcd, var(--shell) 45%, var(--shell-dark));
+    box-shadow: inset 0 2px 0 #f5f0e2, inset 0 -6px 12px rgba(0,0,0,.18), 0 30px 60px rgba(0,0,0,.55), 0 2px 0 var(--shell-edge);
+    position: relative;
+  }
+  .phone.buzz { animation: buzz .5s linear; }
+  @keyframes buzz { 0%,100% { transform: translateX(0) } 20% { transform: translateX(-3px) rotate(-.4deg) } 40% { transform: translateX(3px) rotate(.4deg) } 60% { transform: translateX(-2px) } 80% { transform: translateX(2px) } }
+  .earpiece { width: 54px; height: 6px; border-radius: 3px; background: var(--shell-edge); margin: 0 auto 14px; box-shadow: inset 0 1px 2px rgba(0,0,0,.4); }
+  .brand { text-align: center; font-size: 11px; letter-spacing: .34em; color: #6f6753; margin-bottom: 10px; font-weight: 700; }
+  .bezel { background: #2a2a26; border-radius: 14px; padding: 12px; box-shadow: inset 0 2px 6px rgba(0,0,0,.6); }
+  .lcd {
+    height: 236px; border-radius: 4px; padding: 8px 9px; color: var(--pixel); font: 600 13.5px/1.28 var(--mono);
+    background: linear-gradient(180deg, var(--lcd), var(--lcd-dark));
+    background-image: linear-gradient(180deg, var(--lcd), var(--lcd-dark)), repeating-linear-gradient(0deg, rgba(0,0,0,.05) 0 1px, transparent 1px 3px);
+    background-blend-mode: multiply; box-shadow: inset 0 0 14px rgba(40,50,20,.45);
+    display: flex; flex-direction: column; overflow: hidden; text-shadow: 1px 1px 0 rgba(29,38,22,.18);
+  }
+  .lcd-top { display: flex; justify-content: space-between; font-size: 10.5px; border-bottom: 1px solid rgba(29,38,22,.35); padding-bottom: 3px; margin-bottom: 5px; }
+  .lcd-body { flex: 1; white-space: pre-wrap; overflow-wrap: anywhere; overflow: hidden; }
+  .lcd-body.idle { display: grid; place-content: center; text-align: center; gap: 4px; }
+  .lcd-body .big { font-size: 22px; letter-spacing: .06em; }
+  .lcd-input { border-top: 1px solid rgba(29,38,22,.35); padding-top: 3px; min-height: 22px; display: flex; gap: 4px; }
+  .lcd-input[hidden] { display: none; }
+  .lcd-input .caret { animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0 } }
+  .lcd-soft { display: flex; justify-content: space-between; font-size: 11px; margin-top: 3px; text-transform: uppercase; }
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px 10px; margin-top: 18px; }
+  .pad button {
+    font: 600 19px var(--sans); color: #2c2a24; height: 42px; border: 0; border-radius: 21px / 16px; cursor: pointer;
+    background: linear-gradient(180deg, #f6f1e3, #cfc7b2); box-shadow: 0 2px 0 var(--shell-edge), 0 4px 6px rgba(0,0,0,.25);
+    display: flex; align-items: baseline; justify-content: center; gap: 5px; padding-top: 9px;
+  }
+  .pad button small { font: 600 9px var(--sans); letter-spacing: .08em; color: #7a715d; text-transform: uppercase; }
+  .pad button:active, .pad button.down { transform: translateY(2px); box-shadow: 0 0 0 var(--shell-edge), 0 1px 2px rgba(0,0,0,.3); }
+  .pad button:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+  .pad .call { background: linear-gradient(180deg, #46a36b, var(--call)); color: #fff; font-size: 12px; letter-spacing: .14em; padding-top: 0; align-items: center; }
+  .pad .end { background: linear-gradient(180deg, #d1604d, var(--end)); color: #fff; font-size: 12px; letter-spacing: .14em; padding-top: 0; align-items: center; }
+  .pad .clear { font-size: 12px; letter-spacing: .14em; padding-top: 0; align-items: center; }
+
+  /* side panels */
+  .wire { font: 12px/1.5 var(--mono); color: var(--ink); border-left: 2px solid var(--line); padding-left: 12px; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 5em; }
+  .wire b { color: var(--signal); font-weight: 600; }
+  .meter { height: 3px; background: var(--line); margin: 8px 0 4px; }
+  .meter i { display: block; height: 100%; background: var(--signal); width: 0; transition: width .25s; }
+  .meter-label { font: 11px var(--mono); color: var(--muted); }
+  .sms { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .sms li { background: #f1ead9; color: #2a251c; font: 13px/1.4 var(--mono); padding: 10px 12px; border-radius: 2px 12px 12px 12px; box-shadow: 0 6px 14px rgba(0,0,0,.35); animation: drop .35s ease-out; }
+  .sms li time { display: block; font-size: 10px; color: #8a8068; margin-bottom: 3px; letter-spacing: .08em; }
+  .sms-empty { font-size: 13px; color: var(--muted); }
+  @keyframes drop { from { transform: translateY(-8px); opacity: 0 } }
+  @media (max-width: 980px) { body { grid-template-columns: 1fr; justify-items: center; gap: 28px; } .left { justify-self: center; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<section class="left">
+  <h1>Hermes over USSD</h1>
+  <p class="lede">Your agent, on a phone with no internet.</p>
+  <p>This simulator posts exactly what a telco USSD gateway posts. It is served to this machine only.</p>
+
+  <h2>SIM card</h2>
+  <label for="number">Phone number</label>
+  <input id="number" type="text" inputmode="tel" autocomplete="off" value="+2348012345678">
+  <label for="secret">Webhook secret</label>
+  <input id="secret" type="password" autocomplete="off" placeholder="USSD_WEBHOOK_SECRET">
+  <div id="status" class="status" role="status">Enter the secret, then dial.</div>
+
+  <h2>Keys</h2>
+  <div class="keys-help">
+    Dial <kbd>*384*77#</kbd> and press <kbd>Enter</kbd>.<br>
+    Type on your keyboard, or multi-tap the keypad.<br>
+    <kbd>#</kbd> on the keypad switches 123 / abc.<br>
+    <kbd>Backspace</kbd> clears, <kbd>Esc</kbd> hangs up.
+  </div>
+</section>
+
+<main>
+  <div class="phone" id="phone">
+    <div class="earpiece"></div>
+    <div class="brand">HERMES&nbsp;TEL</div>
+    <div class="bezel">
+      <div class="lcd">
+        <div class="lcd-top"><span id="signal">▂▄▆█ 2G</span><span id="mode"></span><span id="envelope"></span><span id="clock"></span></div>
+        <div class="lcd-body idle" id="screen" aria-live="polite"></div>
+        <div class="lcd-input" id="inputRow" hidden><span id="typed"></span><span class="caret">_</span></div>
+        <div class="lcd-soft"><span id="softL"></span><span id="softR"></span></div>
+      </div>
+    </div>
+    <div class="pad" id="pad">
+      <button class="call" data-k="call" aria-label="Call or send">Send</button>
+      <button class="clear" data-k="clear" aria-label="Clear">Clear</button>
+      <button class="end" data-k="end" aria-label="Hang up">End</button>
+      <button data-k="1">1<small>.,?</small></button><button data-k="2">2<small>abc</small></button><button data-k="3">3<small>def</small></button>
+      <button data-k="4">4<small>ghi</small></button><button data-k="5">5<small>jkl</small></button><button data-k="6">6<small>mno</small></button>
+      <button data-k="7">7<small>pqrs</small></button><button data-k="8">8<small>tuv</small></button><button data-k="9">9<small>wxyz</small></button>
+      <button data-k="*">*<small>+</small></button><button data-k="0">0<small>space</small></button><button data-k="#">#<small>abc</small></button>
+    </div>
+  </div>
+</main>
+
+<section class="right">
+  <h2>On the wire</h2>
+  <div class="wire" id="wire">Nothing sent yet. Each keypress round is one small HTTP POST; the reply is one screen of plain text.</div>
+  <div class="meter"><i id="meterBar"></i></div>
+  <div class="meter-label" id="meterLabel">0 / 182 characters</div>
+
+  <h2>SMS received</h2>
+  <ul class="sms" id="sms"></ul>
+  <div class="sms-empty" id="smsEmpty">Long or late answers land here when you pick "Text me the answer".</div>
+</section>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var TAPS = { "1": ".,?!1", "2": "abc2", "3": "def3", "4": "ghi4", "5": "jkl5", "6": "mno6", "7": "pqrs7", "8": "tuv8", "9": "wxyz9", "0": " 0", "*": "*+" };
+  var state = { view: "idle", dial: "", session: "", history: "", typed: "", abc: false, busy: false, tap: null };
+  var screen = $("screen"), typedEl = $("typed");
+
+  function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
+  function setStatus(text, kind) { var el = $("status"); el.textContent = text; el.className = "status" + (kind ? " " + kind : ""); }
+  function number() { return $("number").value.trim(); }
+  function secret() { return $("secret").value.trim(); }
+
+  function render() {
+    var idle = state.view === "idle", dialing = state.view === "dial", live = state.view === "ussd", done = state.view === "end";
+    screen.className = "lcd-body" + (idle || dialing ? " idle" : "");
+    if (idle) screen.innerHTML = '<div class="big">HERMES</div><div>Dial *384*77#</div>';
+    if (dialing) screen.innerHTML = '<div class="big">' + esc(state.dial) + '</div><div>Send to call</div>';
+    $("inputRow").hidden = !live;
+    typedEl.textContent = state.typed;
+    $("mode").textContent = live ? (state.abc ? "abc" : "123") : "";
+    $("softL").textContent = state.busy ? "" : (live ? "Send" : dialing ? "Call" : done ? "OK" : "");
+    $("softR").textContent = live || dialing ? "Clear" : "";
+  }
+
+  function show(text) { screen.textContent = text; }
+
+  function wire(request, response) {
+    var count = response.length;
+    $("wire").innerHTML = "<b>POST</b> /ussd/&bull;&bull;&bull;\ntext=" + esc(JSON.stringify(request)) + "\n\n<b>" + esc(response.slice(0, 3)) + "</b>" + esc(response.slice(3));
+    $("meterBar").style.width = Math.min(100, count / 182 * 100) + "%";
+    $("meterLabel").textContent = count + " / 182 characters";
+  }
+
+  function post(text) {
+    if (!secret()) { setStatus("Enter the webhook secret first.", "bad"); $("secret").focus(); return; }
+    state.busy = true; show("Sending..."); render();
+    var body = new URLSearchParams({ sessionId: state.session, serviceCode: state.dial || "*384*77#", phoneNumber: number(), text: text });
+    fetch("/ussd/" + encodeURIComponent(secret()), {
+      method: "POST", body: body,
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Hermes-Ussd-Simulator": "1" }
+    }).then(function (resp) {
+      return resp.text().then(function (reply) { return { status: resp.status, reply: reply }; });
+    }).then(function (res) {
+      state.busy = false;
+      if (res.status === 404) { hangUp(); setStatus("The gateway refused that secret.", "bad"); return; }
+      if (res.status !== 200) { hangUp(); setStatus("Gateway answered HTTP " + res.status + ".", "bad"); return; }
+      setStatus("Connected to the Hermes gateway.", "good");
+      state.history = text; state.typed = "";
+      wire(text, res.reply);
+      if (res.reply.indexOf("CON ") === 0) { state.view = "ussd"; render(); show(res.reply.slice(4)); }
+      else { state.view = "end"; render(); show(res.reply.replace(/^END /, "")); }
+    }).catch(function () {
+      state.busy = false; hangUp(); setStatus("Cannot reach the gateway. Is `hermes gateway` running?", "bad");
+    });
+  }
+
+  function call() {
+    if (state.busy) return;
+    if (state.view === "end") { hangUp(); return; }
+    if (state.view === "dial") {
+      if (!/^\*[\d*]+#$/.test(state.dial)) { setStatus("USSD codes look like *384*77#.", "bad"); return; }
+      state.session = "sim-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      state.history = ""; state.typed = ""; state.abc = false;
+      post("");
+    } else if (state.view === "ussd") {
+      commitTap();
+      post(state.history ? state.history + "*" + state.typed : state.typed);
+    }
+  }
+
+  function hangUp() { state.view = "idle"; state.dial = ""; state.typed = ""; state.history = ""; state.tap = null; render(); }
+
+  function clearOne() {
+    commitTap();
+    if (state.view === "dial") { state.dial = state.dial.slice(0, -1); if (!state.dial) state.view = "idle"; }
+    else if (state.view === "ussd") state.typed = state.typed.slice(0, -1);
+    render();
+  }
+
+  function commitTap() { if (state.tap) { clearTimeout(state.tap.timer); state.tap = null; } }
+
+  function type(ch) {
+    if (state.busy) return;
+    if (state.view === "idle" || state.view === "end") { if (!/[\d*#]/.test(ch)) return; state.view = "dial"; state.dial = ""; }
+    if (state.view === "dial") { if (/[\d*#]/.test(ch) && state.dial.length < 24) state.dial += ch; }
+    else if (state.view === "ussd" && state.typed.length < 160) state.typed += ch;
+    render();
+  }
+
+  function keypad(k) {
+    if (k === "call") return call();
+    if (k === "end") return hangUp();
+    if (k === "clear") return clearOne();
+    if (state.view === "ussd" && k === "#") { commitTap(); state.abc = !state.abc; return render(); }
+    if (state.view === "ussd" && state.abc && TAPS[k]) {
+      var letters = TAPS[k];
+      if (state.tap && state.tap.key === k) {
+        clearTimeout(state.tap.timer);
+        state.tap.i = (state.tap.i + 1) % letters.length;
+        state.typed = state.typed.slice(0, -1) + letters[state.tap.i];
+      } else {
+        commitTap();
+        state.tap = { key: k, i: 0 };
+        state.typed += letters[0];
+      }
+      state.tap.timer = setTimeout(function () { state.tap = null; }, 900);
+      return render();
+    }
+    type(k);
+  }
+
+  $("pad").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (b) { keypad(b.dataset.k); b.blur(); }
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.target.tagName === "INPUT" || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === "Enter") { e.preventDefault(); call(); }
+    else if (e.key === "Escape") hangUp();
+    else if (e.key === "Backspace") { e.preventDefault(); clearOne(); }
+    else if (e.key.length === 1) { e.preventDefault(); commitTap(); type(e.key); }
+    var b = document.querySelector('.pad button[data-k="' + (e.key === "Enter" ? "call" : e.key === "Escape" ? "end" : e.key === "Backspace" ? "clear" : e.key.replace(/"/g, "")) + '"]');
+    if (b) { b.classList.add("down"); setTimeout(function () { b.classList.remove("down"); }, 110); }
+  });
+
+  // SMS tray: the gateway keeps texts for simulator numbers in memory until read here.
+  function beep() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return;
+      var ctx = beep.ctx || (beep.ctx = new Ctx()), t = ctx.currentTime;
+      [0, 0.16].forEach(function (offset) {
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = "square"; o.frequency.value = 1320; g.gain.value = 0.04;
+        o.connect(g); g.connect(ctx.destination); o.start(t + offset); o.stop(t + offset + 0.09);
+      });
+    } catch (err) { /* sound is optional */ }
+  }
+
+  function pollSms() {
+    if (!secret() || document.hidden) return;
+    fetch("/ussd/" + encodeURIComponent(secret()) + "/sms?phone=" + encodeURIComponent(number()))
+      .then(function (r) { return r.ok ? r.json() : { messages: [] }; })
+      .then(function (data) {
+        (data.messages || []).forEach(function (message) {
+          var li = document.createElement("li"), time = document.createElement("time");
+          time.textContent = "HERMES  " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          li.appendChild(time); li.appendChild(document.createTextNode(message));
+          $("sms").prepend(li); $("smsEmpty").hidden = true; $("envelope").textContent = "✉";
+          $("phone").classList.remove("buzz"); void $("phone").offsetWidth; $("phone").classList.add("buzz"); beep();
+        });
+      }).catch(function () { /* gateway down: the next dial reports it */ });
+  }
+
+  function tick() { $("clock").textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
+  setInterval(pollSms, 2500); setInterval(tick, 15000); tick(); render();
+})();
+</script>
+</body>
+</html>

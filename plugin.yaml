@@ -1,0 +1,66 @@
+name: ussd-platform
+label: USSD (Africa's Talking)
+kind: platform
+version: 1.0.0
+manifest_version: 2
+license: MIT
+description: >
+  Talk to Hermes from any phone by dialling a USSD short code: no app, no
+  data plan, no smartphone. Replies are paged into keypad screens, command
+  approvals become numbered menus, and long or late answers arrive by SMS.
+author: Oladokun Olumide
+tags: [gateway, ussd, sms, africa, feature-phone]
+requires_hermes: ">=0.23.0"
+python_dependencies:
+  - "aiohttp>=3.9,<4"
+requires_env:
+  - name: USSD_WEBHOOK_SECRET
+    description: "Random secret (16+ characters) that forms the callback URL path: /ussd/<secret>"
+    prompt: "Webhook secret (openssl rand -hex 24)"
+    password: true
+optional_env:
+  - name: USSD_ALLOWED_USERS
+    description: "Comma-separated phone numbers allowed to use this agent, international format (+234...)"
+    prompt: "Allowed phone numbers"
+    password: false
+  - name: USSD_PIN
+    description: "Optional PIN asked at the start of every call, in case the SIM is in someone else's hands"
+    prompt: "Call PIN (digits)"
+    password: true
+  - name: USSD_HOME_CHANNEL
+    description: "Phone number that receives cron and notification deliveries (by SMS)"
+    prompt: "Home phone number"
+    password: false
+  - name: AFRICASTALKING_USERNAME
+    description: "Africa's Talking username for SMS delivery ('sandbox' uses the sandbox API)"
+    prompt: "Africa's Talking username"
+    url: "https://account.africastalking.com/"
+    password: false
+  - name: AFRICASTALKING_API_KEY
+    description: "Africa's Talking API key for SMS delivery of long or late answers"
+    prompt: "Africa's Talking API key"
+    password: true
+  - name: AFRICASTALKING_SENDER_ID
+    description: "Optional SMS sender ID or short code registered with Africa's Talking"
+    prompt: "SMS sender ID"
+    password: false
+  - name: USSD_WEBHOOK_PORT
+    description: "Local port for the callback server (default 8788)"
+    prompt: "Webhook port"
+    password: false
+  - name: USSD_WEBHOOK_HOST
+    description: "Bind address for the callback server (default 127.0.0.1)"
+    prompt: "Webhook host"
+    password: false
+  - name: USSD_SCREEN_CHARS
+    description: "Characters per USSD screen, 60-182 (default 160)"
+    prompt: "Screen size"
+    password: false
+  - name: USSD_HOLD_SECONDS
+    description: "Seconds a screen waits for a quick answer before showing 'working' (default 6)"
+    prompt: "Hold seconds"
+    password: false
+  - name: USSD_SIMULATOR
+    description: "Serve the keypad-phone simulator at /sim to this machine only (default true)"
+    prompt: "Simulator on?"
+    password: false
