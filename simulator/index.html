@@ -6,134 +6,155 @@
 <title>Hermes USSD simulator</title>
 <link rel="icon" href="data:,">
 <style>
+  /* Montserrat is bundled with the plugin (SIL Open Font License, see simulator/OFL.txt). Nothing is fetched from the internet. */
+  @font-face {
+    font-family: "Montserrat"; font-style: normal; font-weight: 100 900; font-display: swap;
+    src: url("/sim/montserrat.woff2") format("woff2");
+  }
   :root {
-    --desk: #17130f; --desk-2: #211b15; --ink: #efe6d6; --muted: #9d927f; --line: #3a3128;
-    --shell: #d8d0bd; --shell-dark: #b3a98f; --shell-edge: #8f866f;
-    --lcd: #a9b78a; --lcd-dark: #8f9d72; --pixel: #1d2616;
-    --call: #2f7d4f; --end: #b3402e; --signal: #e8792b;
-    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
-    --sans: "Avenir Next Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+    --night: #12173f; --night-deep: #0b0f2e; --night-lift: #1c2360; --rule: #2b3378;
+    --paper: #eef0ff; --haze: #9aa1dc;
+    --danfo: #ffc629; --danfo-shade: #e0a800; --danfo-edge: #a67c00; --ink: #0b0d1e;
+    --lcd: #cdd8b6; --lcd-shade: #b4c19a; --pixel: #1a2313;
+    --go: #1f9d61; --stop: #e5484d; --alarm: #ff8f85; --fine: #7be0a6;
+    --font: "Montserrat", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; min-height: 100%; }
   body {
-    background: radial-gradient(120% 90% at 50% 0%, var(--desk-2), var(--desk) 70%);
-    color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.45;
-    display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 48px;
-    padding: 40px 32px; align-items: start;
+    background: radial-gradient(90% 70% at 52% 46%, var(--night-lift), var(--night) 58%, var(--night-deep));
+    color: var(--paper); font: 500 15px/1.5 var(--font);
+    display: grid; grid-template-columns: minmax(0, 1.05fr) auto minmax(0, 1fr); column-gap: 56px;
+    align-items: center; padding: 34px 48px; min-height: 100vh;
   }
-  h1 { font-size: 15px; letter-spacing: .22em; text-transform: uppercase; margin: 0 0 6px; color: var(--signal); font-weight: 600; }
-  h2 { font-size: 12px; letter-spacing: .2em; text-transform: uppercase; margin: 28px 0 10px; color: var(--muted); font-weight: 600; }
-  p { margin: 0 0 10px; color: var(--muted); max-width: 34ch; }
-  .lede { color: var(--ink); font-size: 26px; line-height: 1.15; max-width: 16ch; margin: 0 0 14px; font-weight: 500; }
-  .left { justify-self: end; max-width: 300px; }
-  .right { max-width: 330px; }
-  label { display: block; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 12px 0 4px; }
-  input[type=text], input[type=password] {
-    width: 100%; background: transparent; border: 0; border-bottom: 1px solid var(--line); color: var(--ink);
-    font: 15px var(--mono); padding: 6px 0; outline: none; border-radius: 0;
-  }
-  input:focus { border-bottom-color: var(--signal); }
-  .status { font: 12px var(--mono); color: var(--muted); margin-top: 10px; min-height: 1.4em; }
-  .status.bad { color: #e2735f; } .status.good { color: #8fc49f; }
-  kbd { font: 12px var(--mono); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; color: var(--ink); }
-  .keys-help { font-size: 13px; color: var(--muted); line-height: 1.9; }
 
-  /* phone */
+  /* left: the code is the headline */
+  .intro { justify-self: end; max-width: 420px; }
+  .product { font-weight: 600; font-size: 15px; color: var(--haze); margin: 0 0 18px; }
+  .code {
+    font-weight: 800; font-size: clamp(50px, 5.3vw, 82px); line-height: .92; white-space: nowrap; letter-spacing: -.035em;
+    color: var(--danfo); margin: 0; font-variant-numeric: tabular-nums;
+  }
+  .lede { font-size: 21px; line-height: 1.3; font-weight: 600; margin: 18px 0 30px; max-width: 17ch; }
+  .field { display: grid; grid-template-columns: 132px 1fr; align-items: baseline; border-top: 1px solid var(--rule); padding: 10px 0; }
+  .field:last-of-type { border-bottom: 1px solid var(--rule); }
+  .field label { color: var(--haze); font-size: 13px; font-weight: 600; }
+  .field input {
+    width: 100%; background: transparent; border: 0; color: var(--paper); font: 600 15px var(--font);
+    padding: 2px 0; outline: none; border-radius: 0; font-variant-numeric: tabular-nums;
+  }
+  .field input::placeholder { color: #5e66ad; font-weight: 500; }
+  .field:focus-within { border-top-color: var(--danfo); }
+  .status { font-size: 13px; font-weight: 600; color: var(--haze); margin: 12px 0 26px; min-height: 1.5em; }
+  .status.bad { color: var(--alarm); } .status.good { color: var(--fine); }
+  .how { margin: 0; padding: 0; list-style: none; color: var(--haze); font-size: 13.5px; line-height: 1.75; }
+  .how b { color: var(--paper); font-weight: 700; }
+
+  /* the handset: Lagos danfo livery, yellow with two black stripes */
   .phone {
-    width: 292px; padding: 26px 22px 30px; border-radius: 46px 46px 64px 64px;
-    background: linear-gradient(160deg, #e6dfcd, var(--shell) 45%, var(--shell-dark));
-    box-shadow: inset 0 2px 0 #f5f0e2, inset 0 -6px 12px rgba(0,0,0,.18), 0 30px 60px rgba(0,0,0,.55), 0 2px 0 var(--shell-edge);
-    position: relative;
+    width: 306px; padding: 22px 22px 30px; border-radius: 40px 40px 58px 58px; position: relative;
+    background: linear-gradient(168deg, #ffd65c, var(--danfo) 40%, var(--danfo-shade));
+    box-shadow: inset 0 2px 0 #ffe79a, inset 0 -8px 14px rgba(120, 80, 0, .28), 0 3px 0 var(--danfo-edge), 0 34px 70px rgba(4, 6, 24, .7);
   }
   .phone.buzz { animation: buzz .5s linear; }
-  @keyframes buzz { 0%,100% { transform: translateX(0) } 20% { transform: translateX(-3px) rotate(-.4deg) } 40% { transform: translateX(3px) rotate(.4deg) } 60% { transform: translateX(-2px) } 80% { transform: translateX(2px) } }
-  .earpiece { width: 54px; height: 6px; border-radius: 3px; background: var(--shell-edge); margin: 0 auto 14px; box-shadow: inset 0 1px 2px rgba(0,0,0,.4); }
-  .brand { text-align: center; font-size: 11px; letter-spacing: .34em; color: #6f6753; margin-bottom: 10px; font-weight: 700; }
-  .bezel { background: #2a2a26; border-radius: 14px; padding: 12px; box-shadow: inset 0 2px 6px rgba(0,0,0,.6); }
+  @keyframes buzz { 0%,100% { transform: none } 20% { transform: translateX(-3px) rotate(-.5deg) } 40% { transform: translateX(3px) rotate(.5deg) } 60% { transform: translateX(-2px) } 80% { transform: translateX(2px) } }
+  .grille { display: flex; gap: 5px; justify-content: center; margin: 2px 0 14px; }
+  .grille i { width: 5px; height: 5px; border-radius: 50%; background: var(--danfo-edge); }
+  .bezel { background: var(--ink); border-radius: 16px; padding: 12px; }
   .lcd {
-    height: 236px; border-radius: 4px; padding: 8px 9px; color: var(--pixel); font: 600 13.5px/1.28 var(--mono);
-    background: linear-gradient(180deg, var(--lcd), var(--lcd-dark));
-    background-image: linear-gradient(180deg, var(--lcd), var(--lcd-dark)), repeating-linear-gradient(0deg, rgba(0,0,0,.05) 0 1px, transparent 1px 3px);
-    background-blend-mode: multiply; box-shadow: inset 0 0 14px rgba(40,50,20,.45);
-    display: flex; flex-direction: column; overflow: hidden; text-shadow: 1px 1px 0 rgba(29,38,22,.18);
+    height: 244px; border-radius: 5px; padding: 9px 11px; color: var(--pixel); font: 600 14px/1.32 var(--font);
+    background: linear-gradient(180deg, var(--lcd), var(--lcd-shade)); box-shadow: inset 0 0 16px rgba(40, 55, 20, .4);
+    display: flex; flex-direction: column; overflow: hidden;
   }
-  .lcd-top { display: flex; justify-content: space-between; font-size: 10.5px; border-bottom: 1px solid rgba(29,38,22,.35); padding-bottom: 3px; margin-bottom: 5px; }
+  .lcd-top { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; border-bottom: 1.5px solid rgba(26, 35, 19, .32); padding-bottom: 4px; margin-bottom: 6px; }
+  .bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 10px; margin-right: 5px; }
+  .bars i { width: 3px; background: var(--pixel); } .bars i:nth-child(1) { height: 3px } .bars i:nth-child(2) { height: 5px } .bars i:nth-child(3) { height: 8px } .bars i:nth-child(4) { height: 10px }
   .lcd-body { flex: 1; white-space: pre-wrap; overflow-wrap: anywhere; overflow: hidden; }
-  .lcd-body.idle { display: grid; place-content: center; text-align: center; gap: 4px; }
-  .lcd-body .big { font-size: 22px; letter-spacing: .06em; }
-  .lcd-input { border-top: 1px solid rgba(29,38,22,.35); padding-top: 3px; min-height: 22px; display: flex; gap: 4px; }
+  .lcd-body.idle { display: grid; place-content: center; text-align: center; gap: 2px; white-space: normal; }
+  .lcd-body .big { font-size: 25px; font-weight: 800; letter-spacing: -.01em; }
+  .lcd-input { border-top: 1.5px solid rgba(26, 35, 19, .32); padding-top: 4px; min-height: 24px; display: flex; gap: 2px; font-weight: 700; }
   .lcd-input[hidden] { display: none; }
   .lcd-input .caret { animation: blink 1s steps(1) infinite; }
   @keyframes blink { 50% { opacity: 0 } }
-  .lcd-soft { display: flex; justify-content: space-between; font-size: 11px; margin-top: 3px; text-transform: uppercase; }
-  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px 10px; margin-top: 18px; }
+  .lcd-soft { display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 800; margin-top: 4px; }
+  .stripes { height: 26px; margin: 16px -22px 14px; background: linear-gradient(180deg, transparent 0 4px, var(--ink) 4px 11px, transparent 11px 15px, var(--ink) 15px 22px, transparent 22px); }
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px 10px; }
   .pad button {
-    font: 600 19px var(--sans); color: #2c2a24; height: 42px; border: 0; border-radius: 21px / 16px; cursor: pointer;
-    background: linear-gradient(180deg, #f6f1e3, #cfc7b2); box-shadow: 0 2px 0 var(--shell-edge), 0 4px 6px rgba(0,0,0,.25);
-    display: flex; align-items: baseline; justify-content: center; gap: 5px; padding-top: 9px;
+    font: 800 19px var(--font); color: var(--paper); height: 44px; border: 0; border-radius: 12px; cursor: pointer;
+    background: linear-gradient(180deg, #262b4d, var(--ink)); box-shadow: 0 3px 0 #05060f, 0 5px 8px rgba(60, 40, 0, .35);
+    display: flex; align-items: baseline; justify-content: center; gap: 6px; padding-top: 10px;
   }
-  .pad button small { font: 600 9px var(--sans); letter-spacing: .08em; color: #7a715d; text-transform: uppercase; }
-  .pad button:active, .pad button.down { transform: translateY(2px); box-shadow: 0 0 0 var(--shell-edge), 0 1px 2px rgba(0,0,0,.3); }
-  .pad button:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
-  .pad .call { background: linear-gradient(180deg, #46a36b, var(--call)); color: #fff; font-size: 12px; letter-spacing: .14em; padding-top: 0; align-items: center; }
-  .pad .end { background: linear-gradient(180deg, #d1604d, var(--end)); color: #fff; font-size: 12px; letter-spacing: .14em; padding-top: 0; align-items: center; }
-  .pad .clear { font-size: 12px; letter-spacing: .14em; padding-top: 0; align-items: center; }
+  .pad button small { font: 600 9.5px var(--font); color: var(--haze); }
+  .pad button:active, .pad button.down { transform: translateY(3px); box-shadow: 0 0 0 #05060f, 0 1px 2px rgba(60, 40, 0, .35); }
+  .pad button:focus-visible { outline: 3px solid var(--paper); outline-offset: 2px; }
+  .pad .act { font-size: 12.5px; font-weight: 700; padding-top: 0; align-items: center; }
+  .pad .call { background: linear-gradient(180deg, #2bbb76, var(--go)); box-shadow: 0 3px 0 #0f5c38, 0 5px 8px rgba(60, 40, 0, .35); }
+  .pad .end { background: linear-gradient(180deg, #f0686c, var(--stop)); box-shadow: 0 3px 0 #8e2226, 0 5px 8px rgba(60, 40, 0, .35); }
 
-  /* side panels */
-  .wire { font: 12px/1.5 var(--mono); color: var(--ink); border-left: 2px solid var(--line); padding-left: 12px; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 5em; }
-  .wire b { color: var(--signal); font-weight: 600; }
-  .meter { height: 3px; background: var(--line); margin: 8px 0 4px; }
-  .meter i { display: block; height: 100%; background: var(--signal); width: 0; transition: width .25s; }
-  .meter-label { font: 11px var(--mono); color: var(--muted); }
+  /* right: what the network carried */
+  .trace { max-width: 400px; align-self: center; }
+  h2 { font-size: 15px; font-weight: 700; margin: 0 0 4px; }
+  .sub { color: var(--haze); font-size: 13px; margin: 0 0 14px; max-width: 40ch; }
+  .rounds { list-style: none; margin: 0; padding: 0; }
+  .rounds li { display: grid; grid-template-columns: 46px 1fr; gap: 0 12px; padding: 10px 0; border-top: 1px solid var(--rule); font-size: 13px; line-height: 1.45; }
+  .rounds li:first-child { animation: land .3s ease-out; }
+  .rounds .tag { font-weight: 800; font-size: 12px; color: var(--ink); background: var(--danfo); border-radius: 4px; padding: 2px 0; text-align: center; align-self: start; }
+  .rounds .tag.end { background: var(--alarm); }
+  .rounds .sent { color: var(--haze); font-weight: 600; overflow-wrap: anywhere; }
+  .rounds .got { grid-column: 2; color: var(--paper); white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .rounds li:nth-child(n+4) { opacity: .45; } .rounds li:nth-child(n+5) { display: none; }
+  .meter { height: 6px; background: var(--night-deep); border-radius: 3px; margin: 14px 0 6px; overflow: hidden; }
+  .meter i { display: block; height: 100%; width: 0; background: var(--danfo); transition: width .25s; }
+  .meter-label { font-size: 12.5px; font-weight: 600; color: var(--haze); font-variant-numeric: tabular-nums; }
+  .texts { margin-top: 34px; }
   .sms { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-  .sms li { background: #f1ead9; color: #2a251c; font: 13px/1.4 var(--mono); padding: 10px 12px; border-radius: 2px 12px 12px 12px; box-shadow: 0 6px 14px rgba(0,0,0,.35); animation: drop .35s ease-out; }
-  .sms li time { display: block; font-size: 10px; color: #8a8068; margin-bottom: 3px; letter-spacing: .08em; }
-  .sms-empty { font-size: 13px; color: var(--muted); }
-  @keyframes drop { from { transform: translateY(-8px); opacity: 0 } }
-  @media (max-width: 980px) { body { grid-template-columns: 1fr; justify-items: center; gap: 28px; } .left { justify-self: center; } }
+  .sms li { background: var(--paper); color: var(--ink); font-size: 13px; line-height: 1.45; font-weight: 500; padding: 10px 14px 12px; border-radius: 3px 16px 16px 16px; animation: land .35s ease-out; overflow-wrap: anywhere; }
+  .sms li time { display: block; font-size: 11px; font-weight: 700; color: #5b6199; margin-bottom: 2px; }
+  .sms li:nth-child(n+4) { display: none; }
+  @keyframes land { from { transform: translateY(-10px); opacity: 0 } }
+
+  @media (max-width: 1080px) {
+    body { grid-template-columns: 1fr; justify-items: center; row-gap: 36px; padding: 28px 20px; }
+    .intro { justify-self: center; } .intro, .trace { max-width: 420px; width: 100%; }
+  }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
 
-<section class="left">
-  <h1>Hermes over USSD</h1>
-  <p class="lede">Your agent, on a phone with no internet.</p>
-  <p>This simulator posts exactly what a telco USSD gateway posts. It is served to this machine only.</p>
+<section class="intro">
+  <p class="product">Hermes over USSD</p>
+  <h1 class="code">*384*77#</h1>
+  <p class="lede">Dial it. Your agent picks up, with no internet on the phone.</p>
 
-  <h2>SIM card</h2>
-  <label for="number">Phone number</label>
-  <input id="number" type="text" inputmode="tel" autocomplete="off" value="+2348012345678">
-  <label for="secret">Webhook secret</label>
-  <input id="secret" type="password" autocomplete="off" placeholder="USSD_WEBHOOK_SECRET">
-  <div id="status" class="status" role="status">Enter the secret, then dial.</div>
+  <div class="field"><label for="number">Phone number</label><input id="number" type="text" inputmode="tel" autocomplete="off" value="+2348012345678"></div>
+  <div class="field"><label for="secret">Webhook secret</label><input id="secret" type="password" autocomplete="off" placeholder="Paste USSD_WEBHOOK_SECRET"></div>
+  <div id="status" class="status" role="status">Paste the secret, then dial.</div>
 
-  <h2>Keys</h2>
-  <div class="keys-help">
-    Dial <kbd>*384*77#</kbd> and press <kbd>Enter</kbd>.<br>
-    Type on your keyboard, or multi-tap the keypad.<br>
-    <kbd>#</kbd> on the keypad switches 123 / abc.<br>
-    <kbd>Backspace</kbd> clears, <kbd>Esc</kbd> hangs up.
-  </div>
+  <ul class="how">
+    <li>Type <b>*384*77#</b> and press <b>Enter</b> to call.</li>
+    <li>Type on your keyboard, or tap the keys the way you would text in 2004.</li>
+    <li><b>#</b> on the keypad switches between numbers and letters.</li>
+    <li><b>Backspace</b> clears. <b>Esc</b> hangs up.</li>
+  </ul>
 </section>
 
 <main>
   <div class="phone" id="phone">
-    <div class="earpiece"></div>
-    <div class="brand">HERMES&nbsp;TEL</div>
+    <div class="grille"><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <div class="bezel">
       <div class="lcd">
-        <div class="lcd-top"><span id="signal">▂▄▆█ 2G</span><span id="mode"></span><span id="envelope"></span><span id="clock"></span></div>
+        <div class="lcd-top"><span><span class="bars"><i></i><i></i><i></i><i></i></span>2G</span><span id="mode"></span><span id="envelope"></span><span id="clock"></span></div>
         <div class="lcd-body idle" id="screen" aria-live="polite"></div>
         <div class="lcd-input" id="inputRow" hidden><span id="typed"></span><span class="caret">_</span></div>
         <div class="lcd-soft"><span id="softL"></span><span id="softR"></span></div>
       </div>
     </div>
+    <div class="stripes" aria-hidden="true"></div>
     <div class="pad" id="pad">
-      <button class="call" data-k="call" aria-label="Call or send">Send</button>
-      <button class="clear" data-k="clear" aria-label="Clear">Clear</button>
-      <button class="end" data-k="end" aria-label="Hang up">End</button>
+      <button class="act call" data-k="call" aria-label="Call or send">Send</button>
+      <button class="act" data-k="clear" aria-label="Clear">Clear</button>
+      <button class="act end" data-k="end" aria-label="Hang up">End</button>
       <button data-k="1">1<small>.,?</small></button><button data-k="2">2<small>abc</small></button><button data-k="3">3<small>def</small></button>
       <button data-k="4">4<small>ghi</small></button><button data-k="5">5<small>jkl</small></button><button data-k="6">6<small>mno</small></button>
       <button data-k="7">7<small>pqrs</small></button><button data-k="8">8<small>tuv</small></button><button data-k="9">9<small>wxyz</small></button>
@@ -142,15 +163,18 @@
   </div>
 </main>
 
-<section class="right">
-  <h2>On the wire</h2>
-  <div class="wire" id="wire">Nothing sent yet. Each keypress round is one small HTTP POST; the reply is one screen of plain text.</div>
+<section class="trace">
+  <h2>What the network carried</h2>
+  <p class="sub" id="traceHint">Every round is one small request: what you keyed in, and the single screen of text that came back.</p>
+  <ol class="rounds" id="rounds"></ol>
   <div class="meter"><i id="meterBar"></i></div>
-  <div class="meter-label" id="meterLabel">0 / 182 characters</div>
+  <div class="meter-label" id="meterLabel">0 of 182 characters on the last screen</div>
 
-  <h2>SMS received</h2>
-  <ul class="sms" id="sms"></ul>
-  <div class="sms-empty" id="smsEmpty">Long or late answers land here when you pick "Text me the answer".</div>
+  <div class="texts">
+    <h2>Texts from Hermes</h2>
+    <p class="sub" id="smsEmpty">Pick "Text me the answer" while Hermes is working and the reply lands here after you hang up.</p>
+    <ul class="sms" id="sms"></ul>
+  </div>
 </section>
 
 <script>
@@ -169,7 +193,7 @@
   function render() {
     var idle = state.view === "idle", dialing = state.view === "dial", live = state.view === "ussd", done = state.view === "end";
     screen.className = "lcd-body" + (idle || dialing ? " idle" : "");
-    if (idle) screen.innerHTML = '<div class="big">HERMES</div><div>Dial *384*77#</div>';
+    if (idle) screen.innerHTML = '<div class="big">Hermes</div><div>Dial *384*77#</div>';
     if (dialing) screen.innerHTML = '<div class="big">' + esc(state.dial) + '</div><div>Send to call</div>';
     $("inputRow").hidden = !live;
     typedEl.textContent = state.typed;
@@ -180,15 +204,20 @@
 
   function show(text) { screen.textContent = text; }
 
-  function wire(request, response) {
-    var count = response.length;
-    $("wire").innerHTML = "<b>POST</b> /ussd/&bull;&bull;&bull;\ntext=" + esc(JSON.stringify(request)) + "\n\n<b>" + esc(response.slice(0, 3)) + "</b>" + esc(response.slice(3));
-    $("meterBar").style.width = Math.min(100, count / 182 * 100) + "%";
-    $("meterLabel").textContent = count + " / 182 characters";
+  function record(entry, response) {
+    var kind = response.slice(0, 3), body = response.slice(4);
+    var li = document.createElement("li"), tag = document.createElement("span"), sent = document.createElement("span"), got = document.createElement("span");
+    tag.className = "tag" + (kind === "END" ? " end" : ""); tag.textContent = kind;
+    sent.className = "sent"; sent.textContent = entry ? "You sent “" + entry + "”" : "You dialled";
+    got.className = "got"; got.textContent = body;
+    li.appendChild(tag); li.appendChild(sent); li.appendChild(got);
+    $("rounds").prepend(li); $("traceHint").hidden = true;
+    $("meterBar").style.width = Math.min(100, response.length / 182 * 100) + "%";
+    $("meterLabel").textContent = response.length + " of 182 characters on the last screen";
   }
 
-  function post(text) {
-    if (!secret()) { setStatus("Enter the webhook secret first.", "bad"); $("secret").focus(); return; }
+  function post(text, entry) {
+    if (!secret()) { setStatus("Paste the webhook secret first.", "bad"); $("secret").focus(); return; }
     state.busy = true; show("Sending..."); render();
     var body = new URLSearchParams({ sessionId: state.session, serviceCode: state.dial || "*384*77#", phoneNumber: number(), text: text });
     fetch("/ussd/" + encodeURIComponent(secret()), {
@@ -198,15 +227,15 @@
       return resp.text().then(function (reply) { return { status: resp.status, reply: reply }; });
     }).then(function (res) {
       state.busy = false;
-      if (res.status === 404) { hangUp(); setStatus("The gateway refused that secret.", "bad"); return; }
-      if (res.status !== 200) { hangUp(); setStatus("Gateway answered HTTP " + res.status + ".", "bad"); return; }
-      setStatus("Connected to the Hermes gateway.", "good");
+      if (res.status === 404) { hangUp(); setStatus("The gateway did not accept that secret.", "bad"); return; }
+      if (res.status !== 200) { hangUp(); setStatus("The gateway answered with error " + res.status + ".", "bad"); return; }
+      setStatus("Connected to your Hermes gateway.", "good");
       state.history = text; state.typed = "";
-      wire(text, res.reply);
+      record(entry, res.reply);
       if (res.reply.indexOf("CON ") === 0) { state.view = "ussd"; render(); show(res.reply.slice(4)); }
       else { state.view = "end"; render(); show(res.reply.replace(/^END /, "")); }
     }).catch(function () {
-      state.busy = false; hangUp(); setStatus("Cannot reach the gateway. Is `hermes gateway` running?", "bad");
+      state.busy = false; hangUp(); setStatus("Cannot reach the gateway. Start it with: hermes gateway run", "bad");
     });
   }
 
@@ -214,13 +243,13 @@
     if (state.busy) return;
     if (state.view === "end") { hangUp(); return; }
     if (state.view === "dial") {
-      if (!/^\*[\d*]+#$/.test(state.dial)) { setStatus("USSD codes look like *384*77#.", "bad"); return; }
+      if (!/^\*[\d*]+#$/.test(state.dial)) { setStatus("A USSD code looks like *384*77#.", "bad"); return; }
       state.session = "sim-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
       state.history = ""; state.typed = ""; state.abc = false;
-      post("");
+      post("", "");
     } else if (state.view === "ussd") {
       commitTap();
-      post(state.history ? state.history + "*" + state.typed : state.typed);
+      post(state.history ? state.history + "*" + state.typed : state.typed, state.typed);
     }
   }
 
@@ -279,7 +308,7 @@
     if (b) { b.classList.add("down"); setTimeout(function () { b.classList.remove("down"); }, 110); }
   });
 
-  // SMS tray: the gateway keeps texts for simulator numbers in memory until read here.
+  // Texts: the gateway keeps SMS for simulator numbers in memory until this page reads them.
   function beep() {
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return;
@@ -299,7 +328,7 @@
       .then(function (data) {
         (data.messages || []).forEach(function (message) {
           var li = document.createElement("li"), time = document.createElement("time");
-          time.textContent = "HERMES  " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          time.textContent = "Hermes, " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
           li.appendChild(time); li.appendChild(document.createTextNode(message));
           $("sms").prepend(li); $("smsEmpty").hidden = true; $("envelope").textContent = "✉";
           $("phone").classList.remove("buzz"); void $("phone").offsetWidth; $("phone").classList.add("buzz"); beep();

@@ -176,6 +176,8 @@ def test_simulator_is_local_only_and_has_an_sms_tray(monkeypatch):
             async with aiohttp.ClientSession() as http:
                 async with http.get(f"{base}/sim") as resp:
                     assert resp.status == 200 and "text/html" in resp.headers["Content-Type"]
+                async with http.get(f"{base}/sim/montserrat.woff2") as resp:
+                    assert resp.status == 200 and (await resp.read())[:4] == b"wOF2"
                 # The same request relayed by a tunnel must not see the page or the tray.
                 relayed = {"X-Forwarded-For": "203.0.113.9"}
                 async with http.get(f"{base}/sim", headers=relayed) as resp:

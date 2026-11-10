@@ -116,8 +116,8 @@ python -m pytest -c tests/pytest.ini --rootdir tests tests/
 hermes plugins validate . --install-deps
 ```
 
-`engine.py` holds all screen logic and has no Hermes imports. `adapter.py` is the gateway and HTTP glue. `simulator/index.html` is one dependency-free page.
+`engine.py` holds all screen logic and has no Hermes imports. `adapter.py` is the gateway and HTTP glue. `simulator/index.html` is one page with no remote dependencies: its typeface, Montserrat, is bundled in `simulator/montserrat.woff2` and served from your machine.
 
 ## License
 
-MIT
+MIT. The bundled Montserrat font is by The Montserrat Project Authors, under the SIL Open Font License 1.1 (`simulator/OFL.txt`).

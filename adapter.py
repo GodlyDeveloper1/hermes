@@ -56,7 +56,9 @@ AT_LIVE_URL = "https://api.africastalking.com/version1/messaging"
 AT_SANDBOX_URL = "https://api.sandbox.africastalking.com/version1/messaging"
 _PHONE_RE = re.compile(r"^\+\d{6,15}$")
 _FORWARD_HEADERS = ("X-Forwarded-For", "X-Forwarded-Host", "Forwarded", "X-Real-Ip", "Cf-Connecting-Ip")
-_SIMULATOR_PAGE = Path(__file__).resolve().parent / "simulator" / "index.html"
+_SIMULATOR_DIR = Path(__file__).resolve().parent / "simulator"
+_SIMULATOR_PAGE = _SIMULATOR_DIR / "index.html"
+_SIMULATOR_FONT = _SIMULATOR_DIR / "montserrat.woff2"  # bundled, SIL OFL 1.1 (simulator/OFL.txt)
 
 _PLATFORM_HINT = (
     "You are replying over USSD to a keypad phone. One screen shows about 130 characters of plain "
@@ -166,6 +168,7 @@ class UssdAdapter(BasePlatformAdapter):
         app.router.add_post("/ussd/{token}", self._handle_ussd)
         app.router.add_get("/ussd/{token}/sms", self._handle_sim_sms)
         app.router.add_get("/sim", self._handle_sim_page)
+        app.router.add_get("/sim/montserrat.woff2", self._handle_sim_font)
         app.router.add_get("/health", self._handle_health)
         runner = web.AppRunner(app, access_log=None)  # the callback path holds the secret: never log it
         await runner.setup()
@@ -336,6 +339,17 @@ class UssdAdapter(BasePlatformAdapter):
             return web.Response(status=404, text="not found")
         return web.Response(text=page, content_type="text/html", charset="utf-8",
                             headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+
+    async def _handle_sim_font(self, request: Any) -> Any:
+        """The simulator's typeface, served from the plugin folder so the page fetches nothing remote."""
+        if not (self._simulator and self._is_local(request)):
+            return web.Response(status=404, text="not found")
+        try:
+            font = _SIMULATOR_FONT.read_bytes()
+        except OSError:
+            return web.Response(status=404, text="not found")
+        return web.Response(body=font, content_type="font/woff2",
+                            headers={"Cache-Control": "max-age=86400", "X-Content-Type-Options": "nosniff"})
 
     async def _handle_sim_sms(self, request: Any) -> Any:
         """SMS tray for the built-in simulator: local requests only, drained on read."""
